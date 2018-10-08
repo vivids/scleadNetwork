@@ -9,19 +9,10 @@ import tensorflow as tf
 import numpy as np
 import threading
 import cv2
-
-TEST_PERCENTAGE = 0
-VALIDATION_PERCENTAGE = 10
-INPUT_DATA_DIR ='/home/deeplearning/datasets/alarmClassification'
-# INPUT_DATA_DIR ='/home/deeplearning/datasets/haha'
-OUTPUT_TFRECORD_DIR = 'output/tfrecord'
-CATELOGS = ('training','testing','validation')
-INPUT_SIZE=1024
-NUM_THREAD=4
-# mutex = threading.Lock()
+import constants as ct
 
 def create_image_lists(testing_percentage,validation_percentage):
-    sub_dirs = [x[0] for x in os.walk(INPUT_DATA_DIR)]
+    sub_dirs = [x[0] for x in os.walk(ct.INPUT_DATA_DIR)]
 #     print(sub_dirs)
     training_image = []
     testing_image = []
@@ -67,11 +58,14 @@ def create_image_lists(testing_percentage,validation_percentage):
                 print(checkExist+' is lost, please check')
             
     result={
-        CATELOGS[0]:training_image,
-        CATELOGS[1]:testing_image,
-        CATELOGS[2]:validation_image
+        ct.CATELOGS[0]:training_image,
+        ct.CATELOGS[1]:testing_image,
+        ct.CATELOGS[2]:validation_image
         }
-    return result    
+    training_image_num = len(training_image)
+#     testing_image_num = len(testing_image)
+#     validation_image_num = len(validation_image)
+    return result,training_image_num
 
 def get_image_path(image_lists, image_dir,  label_name,index,category):
     label_lists = image_lists[label_name]
@@ -115,21 +109,23 @@ def convert_image_examples(rootDir, currImage, histImage,label):
 #     mutex.release() 
     curr_img= cv2.imread(os.path.join(rootDir,currImage),0)
     hist_img = cv2.imread(os.path.join(rootDir,histImage),0)
-    curr_img = cv2.resize(curr_img,(INPUT_SIZE,INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
-    hist_img = cv2.resize(hist_img,(INPUT_SIZE,INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
+    curr_img = cv2.resize(curr_img,(ct.INPUT_SIZE,ct.INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
+    hist_img = cv2.resize(hist_img,(ct.INPUT_SIZE,ct.INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
 #     cv2.namedWindow('1',0)
 #     cv2.namedWindow('2',0)
 #     cv2.imshow('1',curr_img)
 #     cv2.imshow('2',hist_img)
 #     cv2.waitKey()
-    curr_img=np.reshape(curr_img, [INPUT_SIZE,INPUT_SIZE,1])
-    hist_img=np.reshape(hist_img, [INPUT_SIZE,INPUT_SIZE,1])
+    curr_img=np.reshape(curr_img, [ct.INPUT_SIZE,ct.INPUT_SIZE, ct.IMAGE_CHANNEL])
+    hist_img=np.reshape(hist_img, [ct.INPUT_SIZE,ct.INPUT_SIZE,ct.IMAGE_CHANNEL])
     curr_img_str=curr_img.tostring()
     hist_img_str=hist_img.tostring()
-    
+    one_hot_label = np.zeros(ct.CLASS_NUM,dtype=np.uint8)
+    one_hot_label[int(label)] = 1
+    one_hot_label_str = one_hot_label.tostring()
     example = tf.train.Example(features = tf.train.Features(
                         feature={
-                                        'label':_int64_feature(int(label)),
+                                        'label':_bytes_feature(one_hot_label_str),
                                         'curr_img':_bytes_feature(curr_img_str),
                                         'hist_img':_bytes_feature(hist_img_str)}))
     return example
@@ -145,7 +141,7 @@ def mutithread_generate_TFRecord(image_list,tfrecord_name_base,threadID,):
             tfrecord_name=tfrecord_name_base+str(threadID)+'_'+str(num_shard)                        
             writer = tf.python_io.TFRecordWriter(tfrecord_name)    
         rootDir = image_pair[2]
-        example=convert_image_examples(os.path.join(INPUT_DATA_DIR,rootDir),image_pair[0], image_pair[1],image_pair[2])
+        example=convert_image_examples(os.path.join(ct.INPUT_DATA_DIR,rootDir),image_pair[0], image_pair[1],image_pair[2])
         writer.write(example.SerializeToString())        
     
         if not (num_images+1)%500:
@@ -163,35 +159,36 @@ def mutithread_generate_TFRecord(image_list,tfrecord_name_base,threadID,):
 def convert_data_TFRecord(image_list,tfrecord_path):
     isFileExist(tfrecord_path)
 #     tfrecord_writer=tf.python_io.TFRecordWriter()
-    for category in CATELOGS:
+    for category in ct.CATELOGS:
         tfrecord_name_base=os.path.join(tfrecord_path,'data.'+category+'.tfrecord_')
         imagesInfo=image_list[category]
         imageNum = len(imagesInfo)
-        imageNumPerThread = imageNum//NUM_THREAD
+        imageNumPerThread = imageNum//ct.NUM_THREAD
         thread_list=[]
-        for num in range(NUM_THREAD):
-            if num== NUM_THREAD-1:
+        for num in range(ct.NUM_THREAD):
+            if num== ct.NUM_THREAD-1:
                 sub_image_list = imagesInfo[num*imageNumPerThread:imageNum] 
             else:
                 sub_image_list = imagesInfo[num*imageNumPerThread:(num+1)*imageNumPerThread]
             thread = threading.Thread(target=mutithread_generate_TFRecord,args=(sub_image_list,tfrecord_name_base,num))
             thread_list.append(thread)
-        for num in range(NUM_THREAD):   
+        for num in range(ct.NUM_THREAD):   
             thread_list[num].setDaemon(True)
             thread_list[num].start()
-        for num in range(NUM_THREAD):
+        for num in range(ct.NUM_THREAD):
             thread_list[num].join()
+
           
-def main(_):    
+def loadImageAndConvertToTFRecord():    
 #     config = tf.ConfigProto(device_count={"CPU": 4}, 
 #                             inter_op_parallelism_threads = 1, 
 #                             intra_op_parallelism_threads = 4,
 #                             log_device_placement=True)
 # 
 #     tf.InteractiveSession(config=config)
-    image_lists = create_image_lists(TEST_PERCENTAGE,VALIDATION_PERCENTAGE)
-    convert_data_TFRecord(image_lists, OUTPUT_TFRECORD_DIR)
+    image_lists, training_image_num= create_image_lists(ct.TEST_PERCENTAGE,ct.VALIDATION_PERCENTAGE)
+    convert_data_TFRecord(image_lists, ct.OUTPUT_TFRECORD_DIR)
     print('all images are converted to TFRecords')
-                
-if __name__ == '__main__' :
-    tf.app.run()
+    return  training_image_num     
+# if __name__ == '__main__' :
+#     tf.app.run()
