@@ -27,21 +27,19 @@ def validate_network():
          
         tf.local_variables_initializer().run()
         tf.global_variables_initializer().run()
+        
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
         while(True):
             correct_prediction_list = []   
             ckpt = tf.train.get_checkpoint_state(ct.MODEL_SAVE_PATH)
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess,ckpt.model_checkpoint_path)
                 global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
-                coord = tf.train.Coordinator()
-                threads = tf.train.start_queue_runners(sess=sess, coord=coord)
                 for _ in range(validation_image_num):
                     test_image, test_label = sess.run([image_tensor,label_tensor])
                     per_correct_prediction = sess.run(correct_prediction, feed_dict= {image_inputs:[test_image],label_inputs:[test_label]})
                     correct_prediction_list.append(per_correct_prediction[0])
-                coord.request_stop()
-                coord.join(threads)
-                
                 correct_num = 0 
                 for rst in correct_prediction_list:
                     correct_num+=rst
@@ -51,7 +49,8 @@ def validate_network():
                 print('no model')
             print('running..........')
             time.sleep(300)
-            
+        coord.request_stop()
+        coord.join(threads) 
                            
 if __name__ == '__main__':
     with tf.device('/cpu:0'):            

@@ -31,7 +31,7 @@ def combine_image_batch(image,label):
     return image_batch,label_batch
     
 
-def readImageFromTFRecord(category,shuffle =False,num_epochs=1):
+def readImageFromTFRecord(category,shuffle =False,num_epochs=None):
     image_tfrecords = tf.train.match_filenames_once(os.path.join(ct.OUTPUT_TFRECORD_DIR,'data.'+category+'.tfrecord*'))
     image_reader = tf.TFRecordReader()
     image_queue = tf.train.string_input_producer(image_tfrecords,shuffle =shuffle,num_epochs=num_epochs)
