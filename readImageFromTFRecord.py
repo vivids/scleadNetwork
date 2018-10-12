@@ -12,8 +12,8 @@ def parse_examples(serialized_example):
                         'label':tf.FixedLenFeature([], tf.string),
                         'curr_img':tf.FixedLenFeature([],tf.string),
                         'hist_img':tf.FixedLenFeature([],tf.string)})
-    curr_img = tf.decode_raw(features['curr_img'],tf.uint8)
-    hist_img = tf.decode_raw(features['hist_img'],tf.uint8)
+    curr_img = tf.decode_raw(features['curr_img'],tf.float32)
+    hist_img = tf.decode_raw(features['hist_img'],tf.float32)
     labels = tf.decode_raw(features['label'],tf.float32)
     curr_img=tf.reshape(curr_img,[ct.INPUT_SIZE,ct.INPUT_SIZE,ct.IMAGE_CHANNEL])
     hist_img = tf.reshape(hist_img,[ct.INPUT_SIZE,ct.INPUT_SIZE,ct.IMAGE_CHANNEL])
@@ -31,8 +31,8 @@ def combine_image_batch(image,label):
     return image_batch,label_batch
     
 
-def readImageFromTFRecord(category,shuffle =False,num_epochs=None):
-    image_tfrecords = tf.train.match_filenames_once(os.path.join(ct.OUTPUT_TFRECORD_DIR,'data.'+category+'.tfrecord*'))
+def readImageFromTFRecord(category,shuffle =False,num_epochs=None,tfrecord_dir=ct.OUTPUT_TFRECORD_DIR):
+    image_tfrecords = tf.train.match_filenames_once(os.path.join(tfrecord_dir,'data.'+category+'.tfrecord*'))
     image_reader = tf.TFRecordReader()
     image_queue = tf.train.string_input_producer(image_tfrecords,shuffle =shuffle,num_epochs=num_epochs)
     _,serialized_example = image_reader.read(image_queue)

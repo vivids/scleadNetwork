@@ -12,8 +12,8 @@ import cv2
 import constants as ct
 from writeAndReadFiles import writeInfo2File
 
-def create_image_lists(testing_percentage,validation_percentage):
-    sub_dirs = [x[0] for x in os.walk(ct.INPUT_DATA_DIR)]
+def create_image_lists(testing_percentage,validation_percentage,dir):
+    sub_dirs = [x[0] for x in os.walk(dir)]
 #     print(sub_dirs)
     training_image = []
     testing_image = []
@@ -112,11 +112,13 @@ def convert_image_examples(rootDir, currImage, histImage,label):
     hist_img = cv2.imread(os.path.join(rootDir,histImage),0)
     curr_img = cv2.resize(curr_img,(ct.INPUT_SIZE,ct.INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
     hist_img = cv2.resize(hist_img,(ct.INPUT_SIZE,ct.INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
-#     curr_img = curr_img.astype(np.float32)/255.0
+    
+    curr_img = curr_img.astype(np.float32)/255.0
+    hist_img = hist_img.astype(np.float32)/255.0
 #     curr_avg = np.mean(curr_img)
 #     curr_std = np.std(curr_img)
 #     curr_img = (curr_img - curr_avg)
-#     hist_img = hist_img.astype(np.float32)/255.0
+ 
 #     hist_avg = np.mean(hist_img)
 #     hist_std = np.std(hist_img)
 #     hist_img = (hist_img - hist_avg)
@@ -189,18 +191,19 @@ def convert_data_TFRecord(image_list,tfrecord_path):
             thread_list[num].join()
 
           
-def loadImageAndConvertToTFRecord():    
+def loadImageAndConvertToTFRecord(test_percentage=ct.TEST_PERCENTAGE,validation_percentage=ct.VALIDATION_PERCENTAGE
+                                  ,inputDataDir=ct.INPUT_DATA_DIR,infoSavePath=ct.INFORMATION_PATH, tfrecordPath=ct.OUTPUT_TFRECORD_DIR):    
 #     config = tf.ConfigProto(device_count={"CPU": 4}, 
 #                             inter_op_parallelism_threads = 1, 
 #                             intra_op_parallelism_threads = 4,
 #                             log_device_placement=True)
 # 
 #     tf.InteractiveSession(config=config)
-    image_lists,dataSetSizeList= create_image_lists(ct.TEST_PERCENTAGE,ct.VALIDATION_PERCENTAGE)
-    convert_data_TFRecord(image_lists, ct.OUTPUT_TFRECORD_DIR)
+    image_lists,dataSetSizeList= create_image_lists(test_percentage,validation_percentage,inputDataDir)
+    convert_data_TFRecord(image_lists, tfrecordPath)
     print('all images are converted to TFRecords')
     dateSetSize= {}
     for i in range(len(ct.CATELOGS)):
         dateSetSize[ct.CATELOGS[i]]=dataSetSizeList[i]
-    writeInfo2File(dateSetSize, ct.INFORMATION_PATH)
+    writeInfo2File(dateSetSize, infoSavePath)
     return dateSetSize['training']   

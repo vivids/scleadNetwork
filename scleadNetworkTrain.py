@@ -37,7 +37,7 @@ def train_network(training_image_num):
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
          
-        for i in range(ct.STEPS):
+        for i in range(ct.STEPS+1):
             image_batch, label_batch = sess.run([image_batch_tensor,label_batch_tensor])
             _,loss_val,step = sess.run([train_step, cross_entropy_loss_mean,global_step], 
                                        feed_dict= {image_inputs:image_batch,label_inputs:label_batch})

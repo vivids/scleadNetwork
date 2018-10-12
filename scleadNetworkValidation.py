@@ -44,7 +44,7 @@ def validate_network():
                 for rst in correct_prediction_list:
                     correct_num+=rst
                 accuracy_score = correct_num/len(correct_prediction_list)
-                print('after %s iteration, the accuracy is %g'%(global_step,accuracy_score))
+                print('after %s iteration, the validation accuracy is %g'%(global_step,accuracy_score))
             else:
                 print('no model')
             print('running..........')
