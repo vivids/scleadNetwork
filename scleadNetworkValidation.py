@@ -17,7 +17,7 @@ def validate_network():
     image_inputs=tf.placeholder(tf.float32, (1,ct.INPUT_SIZE,ct.INPUT_SIZE,ct.IMAGE_CHANNEL*2), 'validation_inputs')
     label_inputs =tf.placeholder(tf.float32,(1,ct.CLASS_NUM), 'validation_outputs')
 
-    nn_output = foward_propagation(image_inputs)
+    nn_output = foward_propagation(image_inputs,is_training=False)
     correct_prediction = tf.equal(tf.argmax(nn_output,1), tf.argmax(label_inputs,1))
 #     accuracy = tf.reduce_mean(tf.cast(correct_prediction,tf.float32))
    
@@ -48,7 +48,7 @@ def validate_network():
             else:
                 print('no model')
             print('running..........')
-            time.sleep(300)
+            time.sleep(200)
         coord.request_stop()
         coord.join(threads) 
                            

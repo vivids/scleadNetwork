@@ -22,7 +22,7 @@ def test_network():
     image_inputs=tf.placeholder(tf.float32, (1,ct.INPUT_SIZE,ct.INPUT_SIZE,ct.IMAGE_CHANNEL*2), 'testing_inputs')
     label_inputs =tf.placeholder(tf.float32,(1,ct.CLASS_NUM), 'testing_outputs')
 
-    nn_output = foward_propagation(image_inputs)
+    nn_output = foward_propagation(image_inputs,is_training=False)
     correct_prediction = tf.equal(tf.argmax(nn_output,1), tf.argmax(label_inputs,1))
 #     accuracy = tf.reduce_mean(tf.cast(correct_prediction,tf.float32))
    
@@ -41,6 +41,7 @@ def test_network():
             saver.restore(sess,ckpt.model_checkpoint_path)
             global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
             for _ in range(test_image_num):
+#             for _ in range(800):
                 test_image, test_label = sess.run([image_tensor,label_tensor])
                 per_correct_prediction = sess.run(correct_prediction, feed_dict= {image_inputs:[test_image],label_inputs:[test_label]})
                 correct_prediction_list.append(per_correct_prediction[0])

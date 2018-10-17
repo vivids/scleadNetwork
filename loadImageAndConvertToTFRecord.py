@@ -113,8 +113,8 @@ def convert_image_examples(rootDir, currImage, histImage,label):
     curr_img = cv2.resize(curr_img,(ct.INPUT_SIZE,ct.INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
     hist_img = cv2.resize(hist_img,(ct.INPUT_SIZE,ct.INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
     
-    curr_img = curr_img.astype(np.float32)/255.0
-    hist_img = hist_img.astype(np.float32)/255.0
+#     curr_img = curr_img.astype(np.float32)/255.0
+#     hist_img = hist_img.astype(np.float32)/255.0
 #     curr_avg = np.mean(curr_img)
 #     curr_std = np.std(curr_img)
 #     curr_img = (curr_img - curr_avg)
@@ -156,7 +156,7 @@ def mutithread_generate_TFRecord(image_list,tfrecord_name_base,threadID,):
         example=convert_image_examples(os.path.join(ct.INPUT_DATA_DIR,rootDir),image_pair[0], image_pair[1],image_pair[2])
         writer.write(example.SerializeToString())        
     
-        if not (num_images+1)%500:
+        if not (num_images+1)%100:
             writer.close()
             num_shard+=1 
             isUpdateTfrecordName = True  

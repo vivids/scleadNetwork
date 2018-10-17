@@ -17,6 +17,7 @@ def subsample(inputs,factor,scope=None):
         return inputs
     else:
         return slim.max_pool2d(inputs,[1,1],stride = factor, scope = scope)
+#         return slim.max_pool2d(inputs,[factor,factor],stride = factor, scope = scope)
     
 def conv2d_same(inputs,num_outputs,kernel_size, stride,scope=None):
 #     if stride == 1:
@@ -67,6 +68,7 @@ def bottleneck(inputs,depth,depth_bottleneck,stride,outputs_collections=None,sco
 #             shortcut=slim.conv2d(shortcut,depth,[1,1],stride=stride,normalizer_fn=None, activation_fn=None,scope='shortcut')
         else:
             shortcut=slim.conv2d(inputs,depth,[1,1],stride=stride,normalizer_fn=None, activation_fn=None,scope='shortcut')
+#             shortcut=slim.conv2d(inputs,depth,[3,3],stride=stride,normalizer_fn=None, activation_fn=None,scope='shortcut')
         
         residual = slim.conv2d(preact,depth_bottleneck,[1,1],stride = 1, scope = 'conv1')
         residual = conv2d_same(residual,depth_bottleneck,3,stride,scope='conv2')
@@ -82,17 +84,17 @@ def resnet_v2(inputs,blocks,num_classes=None,global_pool=True,include_root_block
             net=inputs
             if include_root_block:
                 with slim.arg_scope([slim.conv2d],activation_fn=None,normalizer_fn=None):
-                    net=conv2d_same(net,64,7,stride=2,scope='conv1')
+                    net=conv2d_same(net,128,7,stride=2,scope='conv1')
                 net=slim.max_pool2d(net, [3,3], stride=2, scope='pool1')
-                net=stack_blocks_dense(net,blocks)
-                net=slim.batch_norm(net,activation_fn=tf.nn.relu,scope='postnorm')
-                if global_pool:
-                    net=tf.reduce_mean(net, [1,2], name='pool5',keepdims=True)
-                if num_classes is not None:
-                    net=slim.conv2d(net,num_classes,[1,1],activation_fn=None,normalizer_fn=None,scope='logits')
-                    end_points = slim.utils.convert_collection_to_dict(end_points_collection)
-                    end_points['prediction']=slim.softmax(net,scope='predictions')
-                    return net,end_points
+            net=stack_blocks_dense(net,blocks)
+            net=slim.batch_norm(net,activation_fn=tf.nn.relu,scope='postnorm')
+            if global_pool:
+                net=tf.reduce_mean(net, [1,2], name='pool5',keepdims=True)
+            if num_classes is not None:
+                net=slim.conv2d(net,num_classes,[1,1],activation_fn=None,normalizer_fn=None,scope='logits')
+                end_points = slim.utils.convert_collection_to_dict(end_points_collection)
+                end_points['prediction']=slim.softmax(net,scope='predictions')
+            return net,end_points
                 
 def resnet_v2_50(inputs, num_classes=None,global_pool=True, reuse=None,scope='resnet_v2_50'):
     blocks=[
@@ -103,8 +105,8 @@ def resnet_v2_50(inputs, num_classes=None,global_pool=True, reuse=None,scope='re
         ]
     return resnet_v2(inputs,blocks,num_classes,global_pool,include_root_block=True, reuse=reuse,scope=scope)
 
-def foward_propagation(inputs):
-    with slim.arg_scope(resnet_arg_scope(is_training=False)):
+def foward_propagation(inputs,is_training=True):
+    with slim.arg_scope(resnet_arg_scope(is_training=is_training)):
         net, _=resnet_v2_50(inputs,ct.CLASS_NUM)
         net_shape=net.get_shape().as_list()
         output=tf.reshape(net, [net_shape[0],net_shape[3]])
