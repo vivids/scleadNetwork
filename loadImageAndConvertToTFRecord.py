@@ -10,9 +10,10 @@ import numpy as np
 import threading
 import cv2
 import constants as ct
+from writeAndReadFiles import writeInfo2File
 
-def create_image_lists(testing_percentage,validation_percentage):
-    sub_dirs = [x[0] for x in os.walk(ct.INPUT_DATA_DIR)]
+def create_image_lists(testing_percentage,validation_percentage,dir):
+    sub_dirs = [x[0] for x in os.walk(dir)]
 #     print(sub_dirs)
     training_image = []
     testing_image = []
@@ -63,9 +64,9 @@ def create_image_lists(testing_percentage,validation_percentage):
         ct.CATELOGS[2]:validation_image
         }
     training_image_num = len(training_image)
-#     testing_image_num = len(testing_image)
-#     validation_image_num = len(validation_image)
-    return result,training_image_num
+    testing_image_num = len(testing_image)
+    validation_image_num = len(validation_image)
+    return result,[training_image_num,testing_image_num,validation_image_num]
 
 def get_image_path(image_lists, image_dir,  label_name,index,category):
     label_lists = image_lists[label_name]
@@ -111,6 +112,17 @@ def convert_image_examples(rootDir, currImage, histImage,label):
     hist_img = cv2.imread(os.path.join(rootDir,histImage),0)
     curr_img = cv2.resize(curr_img,(ct.INPUT_SIZE,ct.INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
     hist_img = cv2.resize(hist_img,(ct.INPUT_SIZE,ct.INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
+    
+    curr_img = curr_img.astype(np.float32)/255.0
+    hist_img = hist_img.astype(np.float32)/255.0
+#     curr_avg = np.mean(curr_img)
+#     curr_std = np.std(curr_img)
+#     curr_img = (curr_img - curr_avg)
+ 
+#     hist_avg = np.mean(hist_img)
+#     hist_std = np.std(hist_img)
+#     hist_img = (hist_img - hist_avg)
+
 #     cv2.namedWindow('1',0)
 #     cv2.namedWindow('2',0)
 #     cv2.imshow('1',curr_img)
@@ -120,8 +132,8 @@ def convert_image_examples(rootDir, currImage, histImage,label):
     hist_img=np.reshape(hist_img, [ct.INPUT_SIZE,ct.INPUT_SIZE,ct.IMAGE_CHANNEL])
     curr_img_str=curr_img.tostring()
     hist_img_str=hist_img.tostring()
-    one_hot_label = np.zeros(ct.CLASS_NUM,dtype=np.uint8)
-    one_hot_label[int(label)] = 1
+    one_hot_label = np.zeros(ct.CLASS_NUM,dtype = np.float32)
+    one_hot_label[int(label)] = 1.0
     one_hot_label_str = one_hot_label.tostring()
     example = tf.train.Example(features = tf.train.Features(
                         feature={
@@ -179,16 +191,19 @@ def convert_data_TFRecord(image_list,tfrecord_path):
             thread_list[num].join()
 
           
-def loadImageAndConvertToTFRecord():    
+def loadImageAndConvertToTFRecord(test_percentage=ct.TEST_PERCENTAGE,validation_percentage=ct.VALIDATION_PERCENTAGE
+                                  ,inputDataDir=ct.INPUT_DATA_DIR,infoSavePath=ct.INFORMATION_PATH, tfrecordPath=ct.OUTPUT_TFRECORD_DIR):    
 #     config = tf.ConfigProto(device_count={"CPU": 4}, 
 #                             inter_op_parallelism_threads = 1, 
 #                             intra_op_parallelism_threads = 4,
 #                             log_device_placement=True)
 # 
 #     tf.InteractiveSession(config=config)
-    image_lists, training_image_num= create_image_lists(ct.TEST_PERCENTAGE,ct.VALIDATION_PERCENTAGE)
-    convert_data_TFRecord(image_lists, ct.OUTPUT_TFRECORD_DIR)
+    image_lists,dataSetSizeList= create_image_lists(test_percentage,validation_percentage,inputDataDir)
+    convert_data_TFRecord(image_lists, tfrecordPath)
     print('all images are converted to TFRecords')
-    return  training_image_num     
-# if __name__ == '__main__' :
-#     tf.app.run()
+    dateSetSize= {}
+    for i in range(len(ct.CATELOGS)):
+        dateSetSize[ct.CATELOGS[i]]=dataSetSizeList[i]
+    writeInfo2File(dateSetSize, infoSavePath)
+    return dateSetSize['training']   
