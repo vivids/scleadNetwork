@@ -11,6 +11,7 @@ from loadImageAndConvertToTFRecord import loadImageAndConvertToTFRecord, isFileE
 from scleadNetworkArchitecture import foward_propagation
 import time
 import cv2
+import tensorflow.contrib.slim as slim
 
 def train_network(training_image_num):
     global_step = tf.Variable(0, trainable=False)
@@ -22,13 +23,17 @@ def train_network(training_image_num):
 #     nn_output = tf.clip_by_value(nn_output,1e-8,1.0)
 #     nn_output = nn_output/50000
 #     temp =tf.nn.softmax(nn_output)
-    nn_softmax = tf.clip_by_value(tf.nn.softmax(nn_output),1e-10,1.0)
+#     nn_softmax = tf.clip_by_value(tf.nn.softmax(nn_output),1e-10,1.0)
 #     cross_entropy_loss = label_inputs * tf.log(nn_softmax)
     cross_entropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=nn_output, labels=tf.argmax(label_inputs,1))
     cross_entropy_loss_mean = tf.reduce_mean(cross_entropy_loss)
-    loss_func = cross_entropy_loss_mean
+#     loss_func = cross_entropy_loss_mean
     learning_rate = tf.train.exponential_decay(ct.LEARNING_RATE_INIT, global_step, training_image_num/ct.BATCH_SIZE, ct.LEARNING_DECAY_RATE)
-    train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss_func, global_step)
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies([tf.group(*update_ops)]):
+        train_step = slim.learning.create_train_op(cross_entropy_loss_mean,optimizer,global_step=global_step)
+#     train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss_func, global_step)
     
    
 
@@ -60,9 +65,9 @@ def train_network(training_image_num):
 #             cv2.waitKey()
 
 #             print(label_batch)
-                output = sess.run(nn_softmax,
-                feed_dict= {image_inputs:image_batch,label_inputs:label_batch})    
-                print(output)
+#                 output = sess.run(nn_softmax,
+#                 feed_dict= {image_inputs:image_batch,label_inputs:label_batch})    
+#                 print(output)
               
 #             output = sess.run(temp, 
 #             feed_dict= {image_inputs:image_batch,label_inputs:label_batch})    

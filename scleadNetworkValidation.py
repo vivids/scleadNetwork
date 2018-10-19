@@ -47,6 +47,8 @@ def validate_network():
                 print('after %s iteration, the validation accuracy is %g'%(global_step,accuracy_score))
             else:
                 print('no model')
+#             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+#             print(sess.run(update_ops))
             print('running..........')
             time.sleep(200)
         coord.request_stop()
