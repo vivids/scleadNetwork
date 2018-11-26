@@ -110,8 +110,8 @@ def convert_image_examples(rootDir, currImage, histImage,label):
 #     mutex.release() 
     curr_img= cv2.imread(os.path.join(rootDir,currImage),0)
     hist_img = cv2.imread(os.path.join(rootDir,histImage),0)
-    curr_img = cv2.resize(curr_img,(ct.INPUT_SIZE,ct.INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
-    hist_img = cv2.resize(hist_img,(ct.INPUT_SIZE,ct.INPUT_SIZE),interpolation=cv2.INTER_LINEAR)
+    curr_img = cv2.resize(curr_img,(ct.RESIZE_SIZE,ct.RESIZE_SIZE),interpolation=cv2.INTER_LINEAR)
+    hist_img = cv2.resize(hist_img,(ct.RESIZE_SIZE,ct.RESIZE_SIZE),interpolation=cv2.INTER_LINEAR)
     
 #     curr_img = curr_img.astype(np.float32)/255.0
 #     hist_img = hist_img.astype(np.float32)/255.0
@@ -128,8 +128,8 @@ def convert_image_examples(rootDir, currImage, histImage,label):
 #     cv2.imshow('1',curr_img)
 #     cv2.imshow('2',hist_img)
 #     cv2.waitKey()
-    curr_img=np.reshape(curr_img, [ct.INPUT_SIZE,ct.INPUT_SIZE, ct.IMAGE_CHANNEL])
-    hist_img=np.reshape(hist_img, [ct.INPUT_SIZE,ct.INPUT_SIZE,ct.IMAGE_CHANNEL])
+    curr_img=np.reshape(curr_img, [ct.RESIZE_SIZE,ct.RESIZE_SIZE, ct.IMAGE_CHANNEL])
+    hist_img=np.reshape(hist_img, [ct.RESIZE_SIZE,ct.RESIZE_SIZE,ct.IMAGE_CHANNEL])
     curr_img_str=curr_img.tostring()
     hist_img_str=hist_img.tostring()
     one_hot_label = np.zeros(ct.CLASS_NUM,dtype = np.float32)

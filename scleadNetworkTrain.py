@@ -15,7 +15,7 @@ import tensorflow.contrib.slim as slim
 
 def train_network(training_image_num):
     global_step = tf.Variable(0, trainable=False)
-    image_inputs=tf.placeholder(tf.float32, (ct.BATCH_SIZE,ct.INPUT_SIZE,ct.INPUT_SIZE,ct.IMAGE_CHANNEL*2), 'inputs')
+    image_inputs=tf.placeholder(tf.float32, (ct.BATCH_SIZE,ct.INPUT_SIZE_CURR[0],ct.INPUT_SIZE_CURR[1],ct.IMAGE_CHANNEL*2), 'inputs')
     label_inputs =tf.placeholder(tf.float32,(ct.BATCH_SIZE,ct.CLASS_NUM), 'outputs')
     
     nn_output = foward_propagation(image_inputs)
@@ -49,6 +49,7 @@ def train_network(training_image_num):
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
          
         for i in range(ct.STEPS+1):
+            ct.INPUT_SIZE_CURR = ct.INPUT_SIZE[i%3]
             image_batch, label_batch = sess.run([image_batch_tensor,label_batch_tensor])
             _,loss_val,step = sess.run([train_step, cross_entropy_loss_mean,global_step], 
                                        feed_dict= {image_inputs:image_batch,label_inputs:label_batch})
