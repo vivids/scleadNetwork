@@ -110,9 +110,28 @@ def convert_image_examples(rootDir, currImage, histImage,label):
 #     mutex.release() 
     curr_img= cv2.imread(os.path.join(rootDir,currImage),0)
     hist_img = cv2.imread(os.path.join(rootDir,histImage),0)
+#     cv2.namedWindow('1',0)
+#     cv2.namedWindow('2',0)
+#     cv2.imshow('1',curr_img)
+#     cv2.imshow('2',hist_img)
+#     cv2.waitKey()
+    img_size = hist_img.shape
+#     proportion = img_size[0]/img_size[1]
+#     if img_size[0]<img_size[1]:
+#         save_size = (int(ct.RESIZE_SIZE_SHORT/img_size[0]*img_size[1]),ct.RESIZE_SIZE_SHORT)
+#     else:
+#         save_size = (ct.RESIZE_SIZE_SHORT,int(ct.RESIZE_SIZE_SHORT/img_size[1]*img_size[0]))
+        
     curr_img = cv2.resize(curr_img,(ct.RESIZE_SIZE,ct.RESIZE_SIZE),interpolation=cv2.INTER_LINEAR)
     hist_img = cv2.resize(hist_img,(ct.RESIZE_SIZE,ct.RESIZE_SIZE),interpolation=cv2.INTER_LINEAR)
     
+    row=img_size[1]
+    col=img_size[0]
+#     cv2.namedWindow('3',0)
+#     cv2.namedWindow('4',0)
+#     cv2.imshow('3',curr_img)
+#     cv2.imshow('4',hist_img)
+#     cv2.waitKey()
 #     curr_img = curr_img.astype(np.float32)/255.0
 #     hist_img = hist_img.astype(np.float32)/255.0
 #     curr_avg = np.mean(curr_img)
@@ -128,18 +147,23 @@ def convert_image_examples(rootDir, currImage, histImage,label):
 #     cv2.imshow('1',curr_img)
 #     cv2.imshow('2',hist_img)
 #     cv2.waitKey()
-    curr_img=np.reshape(curr_img, [ct.RESIZE_SIZE,ct.RESIZE_SIZE, ct.IMAGE_CHANNEL])
-    hist_img=np.reshape(hist_img, [ct.RESIZE_SIZE,ct.RESIZE_SIZE,ct.IMAGE_CHANNEL])
+    reshape = [ct.RESIZE_SIZE,ct.RESIZE_SIZE, ct.IMAGE_CHANNEL]
+    reshape = np.array(reshape)
+    curr_img=np.reshape(curr_img, reshape)
+    hist_img=np.reshape(hist_img, reshape)
     curr_img_str=curr_img.tostring()
     hist_img_str=hist_img.tostring()
     one_hot_label = np.zeros(ct.CLASS_NUM,dtype = np.float32)
     one_hot_label[int(label)] = 1.0
     one_hot_label_str = one_hot_label.tostring()
+
     example = tf.train.Example(features = tf.train.Features(
                         feature={
                                         'label':_bytes_feature(one_hot_label_str),
                                         'curr_img':_bytes_feature(curr_img_str),
-                                        'hist_img':_bytes_feature(hist_img_str)}))
+                                        'hist_img':_bytes_feature(hist_img_str),
+                                        'row':_int64_feature(row),
+                                        'col':_int64_feature(col)}))
     return example
     
 

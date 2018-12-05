@@ -83,11 +83,11 @@ def resnet_v2(inputs,blocks,num_classes=None,global_pool=True,include_root_block
         with slim.arg_scope([slim.conv2d,bottleneck,stack_blocks_dense], outputs_collections= end_points_collection):
             net=inputs
             if include_root_block:
-                with slim.arg_scope([slim.conv2d],activation_fn=tf.nn.relu,normalizer_fn=None):#slim.batch_norm
-#                     net=conv2d_same(net,128,7,stride=2,scope='conv1')
-                        net=conv2d_same(net,32,3,stride=2,scope='conv1')
-                        net=conv2d_same(net,64,3,stride=1,scope='conv2')
-                        net=conv2d_same(net,128,3,stride=1,scope='conv3')
+                with slim.arg_scope([slim.conv2d],activation_fn=None,normalizer_fn=None):#slim.batch_norm
+                    net=conv2d_same(net,128,7,stride=2,scope='conv1')
+#                         net=conv2d_same(net,32,3,stride=2,scope='conv1')
+#                         net=conv2d_same(net,64,3,stride=1,scope='conv2')
+#                         net=conv2d_same(net,128,3,stride=1,scope='conv3')
                 net=slim.max_pool2d(net, [3,3], stride=2, scope='pool1')
             net=stack_blocks_dense(net,blocks)
             net=slim.batch_norm(net,activation_fn=tf.nn.relu,scope='postnorm')
@@ -108,7 +108,7 @@ def resnet_v2_50(inputs, num_classes=None,global_pool=True, reuse=None,scope='re
         ]
     return resnet_v2(inputs,blocks,num_classes,global_pool,include_root_block=True, reuse=reuse,scope=scope)
 
-def foward_propagation(inputs,is_training=True):
+def forward_propagation(inputs,is_training=True):
     with slim.arg_scope(resnet_arg_scope(is_training=is_training)):
         net, _=resnet_v2_50(inputs,ct.CLASS_NUM)
         net_shape=net.get_shape().as_list()
