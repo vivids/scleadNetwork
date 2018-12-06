@@ -35,17 +35,22 @@ def image_standardization(img):
     img = img/255.0
     return img
 #     return tf.image.per_image_standardization(img)
-        
+ 
+def image_preprocess(image):
+    image = tf.image.random_flip_left_right(image)
+    image = tf.image.random_flip_up_down(image)   
+    return image
 
-def readImageFromTFRecord(category,shuffle =False,num_epochs=None,tfrecord_dir=ct.OUTPUT_TFRECORD_DIR):
+def readImageFromTFRecord(category,shuffle =False,num_epochs=None, tfrecord_dir=ct.OUTPUT_TFRECORD_DIR):
     image_tfrecords = tf.train.match_filenames_once(os.path.join(tfrecord_dir,'data.'+category+'.tfrecord*'))
     image_reader = tf.TFRecordReader()
     image_queue = tf.train.string_input_producer(image_tfrecords,shuffle =shuffle,num_epochs=num_epochs)
     _,serialized_example = image_reader.read(image_queue)
     curr_img,hist_img,labels=parse_examples(serialized_example) 
-    
-    curr_img = image_standardization(curr_img)    
-    hist_img = image_standardization(hist_img) 
+
+    curr_img=image_standardization(curr_img)
+    hist_img=image_standardization(hist_img)
+
     image = conbineCurrAndHist2channelImage(curr_img,hist_img)
     return image,labels
     
@@ -53,6 +58,33 @@ def readImageFromTFRecord(category,shuffle =False,num_epochs=None,tfrecord_dir=c
 
 def readImageBatchFromTFRecord(category):
     image,labels=readImageFromTFRecord(category,shuffle =True,num_epochs=None)
+    image= image_preprocess(image)
     image_batch,label_batch = combine_image_batch(image,labels)
     return image_batch,label_batch
+#     return image,image1
 
+# image_batch_tensor,image_batch1_tensor= readImageBatchFromTFRecord(ct.CATELOGS[0])
+# 
+# 
+# with tf.Session() as sess:
+#     tf.local_variables_initializer().run()
+#     tf.global_variables_initializer().run()
+#     coord = tf.train.Coordinator()
+#     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+#     for i in range(ct.STEPS+1):
+#         image_batch,image_batch1 = sess.run([image_batch_tensor,image_batch1_tensor])
+#         a,b = cv2.split(image_batch)
+#         cv2.namedWindow('1',0)
+#         cv2.namedWindow('2',0)
+#         cv2.imshow('1',a)    
+#         cv2.imshow('2',b) 
+#         
+#         c,d = cv2.split(image_batch1)
+#         cv2.namedWindow('3',0)
+#         cv2.namedWindow('4',0)
+#         cv2.imshow('3',c)    
+#         cv2.imshow('4',d) 
+#         cv2.waitKey()
+#         
+#     coord.request_stop()
+#     coord.join(threads)
