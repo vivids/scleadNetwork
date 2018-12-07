@@ -42,7 +42,11 @@ def image_standardization(img):
     img = img/255.0
     return img
 #     return tf.image.per_image_standardization(img)
-        
+
+def image_preprocess(image):
+    image = tf.image.random_flip_left_right(image)
+    image = tf.image.random_flip_up_down(image)   
+    return image        
 
 def readImageFromTFRecord(category,shuffle =False,num_epochs=None,tfrecord_dir=ct.OUTPUT_TFRECORD_DIR):
     image_tfrecords = tf.train.match_filenames_once(os.path.join(tfrecord_dir,'data.'+category+'.tfrecord*'))
@@ -71,7 +75,7 @@ def readImageBatchFromTFRecord(category):
 #     
 #     img = tf.cond(tf.equal(selected_input_entrance,0),lambda:image_256_256,
 #                     lambda:tf.cond(tf.equal(selected_input_entrance,1),lambda:image_180_360,lambda:image_360_180))
-    
+    image= image_preprocess(image)
     image_batch,label_batch = combine_image_batch(image,labels)
 
     return image_batch,label_batch
