@@ -56,10 +56,10 @@ def validate_network():
                     test_image, test_label, proportion= sess.run([image_tensor,label_tensor,proportion_tensor])
                     if proportion<3/4:
                         input_shape_flag = 2
-                        input_size = (180,360)
+                        input_size = (360,180)
                     elif proportion >4/3:
                         input_shape_flag = 1
-                        input_size = (360,180)
+                        input_size = (180,360)
                     else:
                         input_shape_flag = 0
                         input_size = (256,256)
