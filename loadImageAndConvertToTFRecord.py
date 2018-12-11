@@ -115,7 +115,7 @@ def convert_image_examples(rootDir, currImage, histImage,label):
 #     cv2.imshow('1',curr_img)
 #     cv2.imshow('2',hist_img)
 #     cv2.waitKey()
-    img_size = hist_img.shape
+    img_shape = hist_img.shape
 #     proportion = img_size[0]/img_size[1]
 #     if img_size[0]<img_size[1]:
 #         save_size = (int(ct.RESIZE_SIZE_SHORT/img_size[0]*img_size[1]),ct.RESIZE_SIZE_SHORT)
@@ -125,8 +125,9 @@ def convert_image_examples(rootDir, currImage, histImage,label):
     curr_img = cv2.resize(curr_img,(ct.RESIZE_SIZE,ct.RESIZE_SIZE),interpolation=cv2.INTER_LINEAR)
     hist_img = cv2.resize(hist_img,(ct.RESIZE_SIZE,ct.RESIZE_SIZE),interpolation=cv2.INTER_LINEAR)
     
-    row=img_size[1]
-    col=img_size[0]
+    row=img_shape[0]
+    col=img_shape[1]
+    proportion = row/col
 #     cv2.namedWindow('3',0)
 #     cv2.namedWindow('4',0)
 #     cv2.imshow('3',curr_img)
@@ -164,7 +165,7 @@ def convert_image_examples(rootDir, currImage, histImage,label):
                                         'hist_img':_bytes_feature(hist_img_str),
                                         'row':_int64_feature(row),
                                         'col':_int64_feature(col)}))
-    return example
+    return example,proportion
     
 
 def mutithread_generate_TFRecord(image_list,tfrecord_name_base,threadID,):
@@ -174,29 +175,48 @@ def mutithread_generate_TFRecord(image_list,tfrecord_name_base,threadID,):
     for image_pair in image_list:
         if isUpdateTfrecordName:
             isUpdateTfrecordName=False
-            tfrecord_name=tfrecord_name_base+str(threadID)+'_'+str(num_shard)                        
-            writer = tf.python_io.TFRecordWriter(tfrecord_name)    
+              
+            tfrecord_name_180_360=tfrecord_name_base+'.shape_180_360'+'.tfrecord_'+str(threadID)+'_'+str(num_shard)
+            tfrecord_name_360_180=tfrecord_name_base+'.shape_360_180'+'.tfrecord_'+str(threadID)+'_'+str(num_shard) 
+            tfrecord_name_256_256=tfrecord_name_base+'.shape_256_256'+'.tfrecord_'+str(threadID)+'_'+str(num_shard)                                    
+            writer_180_360 = tf.python_io.TFRecordWriter(tfrecord_name_180_360)
+            writer_360_180 = tf.python_io.TFRecordWriter(tfrecord_name_360_180)    
+            writer_256_256 = tf.python_io.TFRecordWriter(tfrecord_name_256_256)  
+            
         rootDir = image_pair[2]
-        example=convert_image_examples(os.path.join(ct.INPUT_DATA_DIR,rootDir),image_pair[0], image_pair[1],image_pair[2])
-        writer.write(example.SerializeToString())        
+        example,proportion=convert_image_examples(os.path.join(ct.INPUT_DATA_DIR,rootDir),image_pair[0], image_pair[1],image_pair[2])
+        if proportion<3/4:
+            writer_180_360.write(example.SerializeToString())  
+        elif proportion>4/3:
+            writer_360_180.write(example.SerializeToString())  
+        else:
+            writer_256_256.write(example.SerializeToString())
     
         if not (num_images+1)%100:
-            writer.close()
+            writer_256_256.close()
+            writer_360_180.close()
+            writer_180_360.close()
             num_shard+=1 
             isUpdateTfrecordName = True  
-            print(tfrecord_name+' is generated')
+            print(tfrecord_name_180_360+' is generated')
+            print(tfrecord_name_360_180+' is generated')
+            print(tfrecord_name_256_256+' is generated')
         num_images+=1
     else:
         if not isUpdateTfrecordName:
-            writer.close()
-            print(tfrecord_name+' is generated')
+            writer_256_256.close()
+            writer_360_180.close()
+            writer_180_360.close()
+            print(tfrecord_name_180_360+' is generated')
+            print(tfrecord_name_360_180+' is generated')
+            print(tfrecord_name_256_256+' is generated')
      
 
 def convert_data_TFRecord(image_list,tfrecord_path):
     isFileExist(tfrecord_path)
 #     tfrecord_writer=tf.python_io.TFRecordWriter()
     for category in ct.CATELOGS:
-        tfrecord_name_base=os.path.join(tfrecord_path,'data.'+category+'.tfrecord_')
+        tfrecord_name_base=os.path.join(tfrecord_path,'data.'+category)
         imagesInfo=image_list[category]
         imageNum = len(imagesInfo)
         imageNumPerThread = imageNum//ct.NUM_THREAD

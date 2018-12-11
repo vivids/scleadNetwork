@@ -7,7 +7,7 @@ Created on Oct 10, 2018
 import tensorflow as tf
 import constants as ct
 from scleadNetworkArchitecture import forward_propagation
-from readImageFromTFRecord import readImageFromTFRecord
+from readImageFromTFRecord import readImageFromTFRecordForTest
 from writeAndReadFiles import readInfoFromFile
 import time
 import cv2
@@ -16,7 +16,7 @@ def validate_network():
 #     input_size = (256,256)
     input_shape_flag = tf.Variable(0, trainable=False)
     dataSetSizeList = readInfoFromFile(ct.INFORMATION_PATH)
-    validation_image_num = int(dataSetSizeList['validation'])
+    validation_image_num = dataSetSizeList['validation']
     image_inputs_256_256=tf.placeholder(tf.float32, (1,ct.INPUT_SIZE[0][0],ct.INPUT_SIZE[0][1],ct.IMAGE_CHANNEL*2), 'validation_inputs')
     image_inputs_180_360=tf.placeholder(tf.float32, (1,ct.INPUT_SIZE[1][0],ct.INPUT_SIZE[1][1],ct.IMAGE_CHANNEL*2), 'validation_inputs')
     image_inputs_360_180=tf.placeholder(tf.float32, (1,ct.INPUT_SIZE[2][0],ct.INPUT_SIZE[2][1],ct.IMAGE_CHANNEL*2), 'validation_inputs')
@@ -32,7 +32,7 @@ def validate_network():
 #     correct_prediction = tf.equal(tf.argmax(nn_output,1), tf.argmax(label_inputs,1))
 #     accuracy = tf.reduce_mean(tf.cast(correct_prediction,tf.float32))
    
-    image_tensor,label_tensor,proportion_tensor= readImageFromTFRecord(ct.CATELOGS[2])
+    image_tensor,label_tensor,proportion_tensor= readImageFromTFRecordForTest(ct.CATELOGS[2])
     saver = tf.train.Saver()
     with tf.Session() as sess :
          
@@ -56,10 +56,10 @@ def validate_network():
                     test_image, test_label, proportion= sess.run([image_tensor,label_tensor,proportion_tensor])
                     if proportion<3/4:
                         input_shape_flag = 2
-                        input_size = (180,360)
+                        input_size = (360,180)
                     elif proportion >4/3:
                         input_shape_flag = 1
-                        input_size = (360,180)
+                        input_size = (180,360)
                     else:
                         input_shape_flag = 0
                         input_size = (256,256)
@@ -81,8 +81,8 @@ def validate_network():
                         negative_sample_num+=1
                         if not pred[0]:
                             n2n+=1
-                print(positive_sample_num)
-                print(negative_sample_num)       
+#                 print(positive_sample_num)
+#                 print(negative_sample_num)       
                 correct_num = p2p+ n2n
                 accuracy_score = correct_num/(positive_sample_num+negative_sample_num)
                 p2p_score = p2p/positive_sample_num
@@ -93,6 +93,8 @@ def validate_network():
 #             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 #             print(sess.run(update_ops))
             print('running..........')
+            if global_step == '80001':
+                break
             time.sleep(300)
         coord.request_stop()
         coord.join(threads) 

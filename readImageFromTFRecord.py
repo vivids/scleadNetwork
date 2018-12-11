@@ -30,12 +30,28 @@ def parse_examples(serialized_example):
 def conbineCurrAndHist2channelImage(curr_img,hist_img):
     return tf.concat([curr_img,hist_img],2)
     
-def combine_image_batch(image,label):
+def combine_image_batch(info,flag):
     capacity = ct.MIN_AFTER_DEQUEUE+3*ct.BATCH_SIZE
-    image_batch,label_batch = tf.train.shuffle_batch([image,label],
-                                                     batch_size=ct.BATCH_SIZE,num_threads=4,capacity=capacity,
-                                                     min_after_dequeue=ct.MIN_AFTER_DEQUEUE)
-    return image_batch,label_batch
+    
+    image_batch_256_256,label_batch_256_256,proportion_batch_256_256 = tf.train.shuffle_batch(info['info_256_256'],
+                                         batch_size=ct.BATCH_SIZE,num_threads=4,capacity=capacity,
+                                         min_after_dequeue=ct.MIN_AFTER_DEQUEUE,shared_name='shape_256_256',name='shape_256_256')
+    image_batch_180_360,label_batch_180_360,proportion_batch_180_360 = tf.train.shuffle_batch(info['info_180_360'],
+                                     batch_size=ct.BATCH_SIZE,num_threads=4,capacity=capacity,
+                                     min_after_dequeue=ct.MIN_AFTER_DEQUEUE,shared_name='shape_180_360',name='shape_180_360')
+    image_batch_360_180,label_batch_360_180,proportion_batch_360_180 = tf.train.shuffle_batch(info['info_360_180'],
+                                     batch_size=ct.BATCH_SIZE,num_threads=4,capacity=capacity,
+                                     min_after_dequeue=ct.MIN_AFTER_DEQUEUE,shared_name='shape_360_180',name='shape_360_180')
+    
+    image_batch,label_batch,proportion_batch = tf.cond(tf.equal(flag,0),lambda:[image_batch_256_256,label_batch_256_256,proportion_batch_256_256],lambda:tf.cond(tf.equal(flag,1),
+                                                                                                                                                                 lambda:[image_batch_180_360,label_batch_180_360,proportion_batch_180_360],
+                                                                                                                                                                 lambda:[image_batch_360_180,label_batch_360_180,proportion_batch_360_180]))
+
+    
+    return image_batch,label_batch,proportion_batch
+
+
+
  
 def image_standardization(img):
     img = tf.cast(img, tf.float32)
@@ -48,35 +64,70 @@ def image_preprocess(image):
     image = tf.image.random_flip_up_down(image)   
     return image        
 
-def readImageFromTFRecord(category,shuffle =False,num_epochs=None,tfrecord_dir=ct.OUTPUT_TFRECORD_DIR):
-    image_tfrecords = tf.train.match_filenames_once(os.path.join(tfrecord_dir,'data.'+category+'.tfrecord*'))
-    image_reader = tf.TFRecordReader()
+def readImageFromTFRecordForTest(category, shuffle =False,num_epochs=None,tfrecord_dir=ct.OUTPUT_TFRECORD_DIR):
+    image_tfrecords= tf.train.match_filenames_once(os.path.join(tfrecord_dir,'data.'+category+'*'))    
     image_queue = tf.train.string_input_producer(image_tfrecords,shuffle =shuffle,num_epochs=num_epochs)
+    image_reader = tf.TFRecordReader(name='image_reader_test') 
     _,serialized_example = image_reader.read(image_queue)
-    curr_img,hist_img,labels,proportion=parse_examples(serialized_example) 
-    
+    curr_img,hist_img,label,proportion=parse_examples(serialized_example)
     curr_img = image_standardization(curr_img)    
-    hist_img = image_standardization(hist_img) 
-    image = conbineCurrAndHist2channelImage(curr_img,hist_img)
-    return image,labels,proportion
+    hist_img = image_standardization(hist_img)  
+    image = conbineCurrAndHist2channelImage(curr_img,hist_img)    
+
+    return image,label,proportion
+
+def readImageFromTFRecord(category, shuffle =False,num_epochs=None,tfrecord_dir=ct.OUTPUT_TFRECORD_DIR):
+    image_tfrecords_180_360 = tf.train.match_filenames_once(os.path.join(tfrecord_dir,'data.'+category+'.shape_180_360*'))
+    image_tfrecords_360_180 = tf.train.match_filenames_once(os.path.join(tfrecord_dir,'data.'+category+'.shape_360_180*'))
+    image_tfrecords_256_256 = tf.train.match_filenames_once(os.path.join(tfrecord_dir,'data.'+category+'.shape_256_256*'))    
+#     image_tfrecords = tf.cond(tf.equal(flag,0),lambda:image_tfrecords_256_256,lambda:tf.cond(tf.equal(flag,1),lambda:image_tfrecords_180_360,lambda:image_tfrecords_360_180))
+    
+
+#     image_queue = tf.train.string_input_producer(image_tfrecords,shuffle =shuffle,num_epochs=num_epochs)
+    image_queue_180_360 = tf.train.string_input_producer(image_tfrecords_180_360,shuffle =shuffle,num_epochs=num_epochs)
+    image_queue_360_180 = tf.train.string_input_producer(image_tfrecords_360_180,shuffle =shuffle,num_epochs=num_epochs)
+    image_queue_256_256 = tf.train.string_input_producer(image_tfrecords_256_256,shuffle =shuffle,num_epochs=num_epochs) 
+#     image_queue = tf.cond(tf.equal(flag,0),lambda:image_queue_256_256,lambda:tf.cond(tf.equal(flag,1),lambda:image_queue_180_360,lambda:image_queue_360_180))
+
+    image_reader_180_360 = tf.TFRecordReader(name='image_reader_180_360') 
+    image_reader_360_180 = tf.TFRecordReader(name='image_reader_360_180') 
+    image_reader_256_256 = tf.TFRecordReader(name='image_reader_256_256') 
+        
+    _,serialized_example_180_360 = image_reader_180_360.read(image_queue_180_360)
+    _,serialized_example_360_180 = image_reader_360_180.read(image_queue_360_180)
+    _,serialized_example_256_256 = image_reader_256_256.read(image_queue_256_256)
+    
+#     serialized_example = tf.cond(tf.equal(flag,0),lambda:serialized_example_256_256,lambda:tf.cond(tf.equal(flag,1),lambda:serialized_example_180_360,lambda:serialized_example_360_180))
+#     curr_img,hist_img,labels,proportion=parse_examples(serialized_example)
+    curr_img_180_360,hist_img_180_360,label_180_360,proportion_180_360=parse_examples(serialized_example_180_360)
+    curr_img_360_180,hist_img_360_180,label_360_180,proportion_360_180=parse_examples(serialized_example_360_180) 
+    curr_img_256_256,hist_img_256_256,label_256_256,proportion_256_256=parse_examples(serialized_example_256_256)  
+
+#     curr_img = image_standardization(curr_img)    
+#     hist_img = image_standardization(hist_img) 
+    curr_img_180_360 = image_standardization(curr_img_180_360)    
+    hist_img_180_360 = image_standardization(hist_img_180_360) 
+    curr_img_360_180 = image_standardization(curr_img_360_180)    
+    hist_img_360_180 = image_standardization(hist_img_360_180) 
+    curr_img_256_256 = image_standardization(curr_img_256_256)    
+    hist_img_256_256 = image_standardization(hist_img_256_256) 
+#     image = conbineCurrAndHist2channelImage(curr_img,hist_img)    
+    image_180_360 = conbineCurrAndHist2channelImage(curr_img_180_360,hist_img_180_360)
+    image_360_180 = conbineCurrAndHist2channelImage(curr_img_360_180,hist_img_360_180)
+    image_256_256 = conbineCurrAndHist2channelImage(curr_img_256_256,hist_img_256_256)
+    
+    info_180_360=[image_180_360,label_180_360,proportion_180_360]
+    info_360_180=[image_360_180,label_360_180,proportion_360_180]
+    info_256_256=[image_256_256,label_256_256,proportion_256_256]
+    return {'info_180_360':info_180_360,'info_360_180':info_360_180,'info_256_256':info_256_256}
+#     return image0,labels0,proportion0,image1,labels1,proportion1,image2,labels2,proportion2
     
 
 
-def readImageBatchFromTFRecord(category):
-    image,labels,_=readImageFromTFRecord(category,shuffle =True,num_epochs=None)
-
-#     with tf.variable_scope('global_step',reuse=tf.AUTO_REUSE):
-#         global_step = tf.Variable(0, trainable=False)
-#     selected_input_entrance = global_step%3
-#     
-#     image_256_256 = tf.image.resize_images(image,[256,256],method=0)
-#     image_180_360 = tf.image.resize_images(image,[180,360],method=0)
-#     image_360_180 = tf.image.resize_images(image,[360,180],method=0)
-#     
-#     img = tf.cond(tf.equal(selected_input_entrance,0),lambda:image_256_256,
-#                     lambda:tf.cond(tf.equal(selected_input_entrance,1),lambda:image_180_360,lambda:image_360_180))
-    image= image_preprocess(image)
-    image_batch,label_batch = combine_image_batch(image,labels)
-
-    return image_batch,label_batch
+def readImageBatchFromTFRecord(category,flag):
+    info=readImageFromTFRecord(category,shuffle =True,num_epochs=None)
+#     image= image_preprocess(image)  
+    image_batch,label_batch,proportion_batch = combine_image_batch(info,flag)
+ 
+    return image_batch,label_batch,proportion_batch
 
