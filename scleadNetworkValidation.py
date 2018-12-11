@@ -56,10 +56,10 @@ def validate_network():
                     test_image, test_label, proportion= sess.run([image_tensor,label_tensor,proportion_tensor])
                     if proportion<3/4:
                         input_shape_flag = 2
-                        input_size = (180,360)
+                        input_size = (360,180)
                     elif proportion >4/3:
                         input_shape_flag = 1
-                        input_size = (360,180)
+                        input_size = (180,360)
                     else:
                         input_shape_flag = 0
                         input_size = (256,256)
@@ -81,8 +81,8 @@ def validate_network():
                         negative_sample_num+=1
                         if not pred[0]:
                             n2n+=1
-                print(positive_sample_num)
-                print(negative_sample_num)       
+#                 print(positive_sample_num)
+#                 print(negative_sample_num)       
                 correct_num = p2p+ n2n
                 accuracy_score = correct_num/(positive_sample_num+negative_sample_num)
                 p2p_score = p2p/positive_sample_num
@@ -93,6 +93,8 @@ def validate_network():
 #             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 #             print(sess.run(update_ops))
             print('running..........')
+            if global_step == '80001':
+                break
             time.sleep(300)
         coord.request_stop()
         coord.join(threads) 

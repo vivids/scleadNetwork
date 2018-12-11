@@ -13,6 +13,7 @@ from scleadNetworkArchitecture import forward_propagation
 import time
 import cv2
 import tensorflow.contrib.slim as slim
+from writeAndReadFiles import readInfoFromFile
 
 def resize_batch(batch,size):
     batch_resized=[]
@@ -26,6 +27,8 @@ def train_network(training_image_num):
     image_inputs_180_360=tf.placeholder(tf.float32, (ct.BATCH_SIZE,ct.INPUT_SIZE[1][0],ct.INPUT_SIZE[1][1],ct.IMAGE_CHANNEL*2), 'inputs')
     image_inputs_360_180=tf.placeholder(tf.float32, (ct.BATCH_SIZE,ct.INPUT_SIZE[2][0],ct.INPUT_SIZE[2][1],ct.IMAGE_CHANNEL*2), 'inputs')
     label_inputs =tf.placeholder(tf.float32,(ct.BATCH_SIZE,ct.CLASS_NUM), 'outputs')
+    
+    
     
     selected_input_entrance = global_step%3
     image_inputs = tf.cond(tf.equal(selected_input_entrance,0),lambda:image_inputs_256_256,

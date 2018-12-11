@@ -115,7 +115,7 @@ def convert_image_examples(rootDir, currImage, histImage,label):
 #     cv2.imshow('1',curr_img)
 #     cv2.imshow('2',hist_img)
 #     cv2.waitKey()
-    img_size = hist_img.shape
+    row,col = hist_img.shape
 #     proportion = img_size[0]/img_size[1]
 #     if img_size[0]<img_size[1]:
 #         save_size = (int(ct.RESIZE_SIZE_SHORT/img_size[0]*img_size[1]),ct.RESIZE_SIZE_SHORT)
@@ -125,8 +125,6 @@ def convert_image_examples(rootDir, currImage, histImage,label):
     curr_img = cv2.resize(curr_img,(ct.RESIZE_SIZE,ct.RESIZE_SIZE),interpolation=cv2.INTER_LINEAR)
     hist_img = cv2.resize(hist_img,(ct.RESIZE_SIZE,ct.RESIZE_SIZE),interpolation=cv2.INTER_LINEAR)
     
-    row=img_size[1]
-    col=img_size[0]
 #     cv2.namedWindow('3',0)
 #     cv2.namedWindow('4',0)
 #     cv2.imshow('3',curr_img)
