@@ -132,8 +132,8 @@ def train_network(training_image_num):
         coord.join(threads)
 
 def main(_):
-#     training_image_num=loadImageAndConvertToTFRecord()
-    training_image_num=3922
+    training_image_num=loadImageAndConvertToTFRecord()
+#     training_image_num=3922
     train_network(training_image_num)
 
 if __name__ == '__main__' :
