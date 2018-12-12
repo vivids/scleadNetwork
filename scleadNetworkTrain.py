@@ -21,6 +21,26 @@ def resize_batch(batch,size):
         batch_resized.append(cv2.resize(batch[i],size,interpolation=cv2.INTER_LINEAR))
     return np.array(batch_resized)
 
+def choose_queue_of_size_256_256(shape_256_256,shape_180_360,shape_360_180):
+    proportion_sum = shape_360_180+shape_180_360+shape_256_256
+    choose = tf.random_uniform([1],minval=0,maxval=proportion_sum,dtype=tf.int32,seed=None,name=None)[0]
+    choose_flag = tf.cond(tf.less(choose,shape_256_256),lambda:tf.Variable(0, trainable=False),
+                    lambda:tf.cond(tf.less(choose,shape_256_256+shape_180_360),lambda:tf.Variable(1, trainable=False),
+                                   lambda:tf.Variable(2, trainable=False)))
+    return choose_flag
+
+def choose_queue_of_size_180_360(shape_256_256,shape_180_360):
+    proportion_sum = shape_180_360+shape_256_256
+    choose = tf.random_uniform([1],minval=0,maxval=proportion_sum,dtype=tf.int32,seed=None,name=None)[0]
+    choose_flag = tf.cond(tf.less(choose,shape_256_256),lambda:tf.Variable(0, trainable=False),lambda:tf.Variable(1, trainable=False))
+    return choose_flag
+
+def choose_queue_of_size_360_180(shape_256_256,shape_360_180):
+    proportion_sum = shape_360_180+shape_256_256
+    choose = tf.random_uniform([1],minval=0,maxval=proportion_sum,dtype=tf.int32,seed=None,name=None)[0]
+    choose_flag = tf.cond(tf.less(choose,shape_256_256),lambda:tf.Variable(0, trainable=False), lambda:tf.Variable(2, trainable=False))
+    return choose_flag
+
 def train_network(training_image_num):
     global_step = tf.Variable(0, trainable=False)
     image_inputs_256_256=tf.placeholder(tf.float32, (ct.BATCH_SIZE,ct.INPUT_SIZE[0][0],ct.INPUT_SIZE[0][1],ct.IMAGE_CHANNEL*2), 'inputs') 
@@ -30,15 +50,22 @@ def train_network(training_image_num):
     
     
     datainfoList=readInfoFromFile(ct.DATASET_INFO_DIR)
-    proportion_sum = datainfoList['shape_360_180']+datainfoList['shape_180_360']+datainfoList['shape_256_256']
+    shape_360_180=datainfoList['shape_360_180']
+    shape_180_360=datainfoList['shape_180_360']
+    shape_256_256=datainfoList['shape_256_256']
+    print('shape_256_256:shape_180_360:shape_360_180=%d:%d:%d'%(shape_256_256,shape_180_360,shape_360_180))
+    train_shape_256_256 = shape_360_180+shape_180_360+shape_256_256
+    train_shape_180_360 = shape_180_360+shape_256_256
+    train_shape_360_180 = shape_360_180+shape_256_256
+    proportion_sum = train_shape_256_256+train_shape_180_360+train_shape_360_180
 #     choose = tf.random_uniform([1],minval=0,maxval=proportion_sum,dtype=tf.int32,seed=None,name=None)[0]
         
 #     selected_input_shape = tf.cond(tf.less(choose,int(datainfoList['shape_256_256'])),lambda:tf.Variable(0),
 #                                    lambda:tf.cond( tf.less(choose , int(datainfoList['shape_256_256'])+int(datainfoList['shape_180_360'])),lambda:tf.Variable(1),lambda:tf.Variable(2)))
     selected_input_shape = global_step%proportion_sum
-    image_inputs,choose_flag = tf.cond(tf.less(selected_input_shape,datainfoList['shape_256_256']),lambda:[image_inputs_256_256,tf.Variable(0, trainable=False)],
-                        lambda:tf.cond(tf.less(selected_input_shape,datainfoList['shape_256_256']+datainfoList['shape_180_360']),lambda:[image_inputs_180_360,tf.Variable(1, trainable=False)],
-                                       lambda:[image_inputs_360_180,tf.Variable(2, trainable=False)]))
+    image_inputs,choose_flag = tf.cond(tf.less(selected_input_shape,train_shape_256_256),lambda:[image_inputs_256_256,choose_queue_of_size_256_256( train_shape_256_256,train_shape_180_360,train_shape_360_180)],
+                        lambda:tf.cond(tf.less(selected_input_shape,train_shape_256_256+train_shape_180_360),lambda:[image_inputs_180_360, choose_queue_of_size_180_360(shape_256_256,shape_180_360)],
+                                       lambda:[image_inputs_360_180,choose_queue_of_size_360_180(shape_256_256,shape_360_180)]))
     nn_output = forward_propagation(image_inputs)
 #     output_max = tf.reduce_max(nn_output, axis=1)
 #     nn_output = tf.clip_by_value(nn_output,1e-8,1.0)
@@ -76,13 +103,7 @@ def train_network(training_image_num):
             image_batch, label_batch, proportion_batch= sess.run([image_batch_tensor,label_batch_tensor,proportion_batch_tensor])        
             
 #             #debug
-#             test_flag =   sess.run(choose_flag)
-#             if(test_flag==0):  
-#                 print('%d : %g,%g'%(test_flag,proportion_batch[2],(proportion_batch[2]<=4/3 and proportion_batch[2]>=3/4)))
-#             elif(test_flag==1):  
-#                 print('%d : %g,%g'%(test_flag,proportion_batch[2],proportion_batch[2]<3/4))
-#             else:
-#                 print('%d : %g,%g'%(test_flag,proportion_batch[2],proportion_batch[2]>4/3))                
+#             print(proportion_batch[2])    
 #             a,b = cv2.split(image_batch[93])      
 #             cv2.namedWindow('1',0)   
 #             cv2.namedWindow('2',0)
@@ -92,12 +113,15 @@ def train_network(training_image_num):
 #             #debug
 
             
-            if i%proportion_sum<datainfoList['shape_256_256']:
+            if i%proportion_sum<train_shape_256_256:
+#                 print('256')
                 img_size =(256,256)
-            elif i%proportion_sum<datainfoList['shape_180_360']+datainfoList['shape_256_256']:
+            elif i%proportion_sum<train_shape_256_256+train_shape_180_360:
+#                 print('180')
                 img_size =(360,180)
 #                 img_size =(256,256)
             else:
+#                 print('360')
                 img_size =(180,360)
 
             image_batch = resize_batch(image_batch,img_size)    
@@ -132,8 +156,8 @@ def train_network(training_image_num):
         coord.join(threads)
 
 def main(_):
-#     training_image_num=loadImageAndConvertToTFRecord()
-    training_image_num=3922
+    training_image_num=loadImageAndConvertToTFRecord()
+#     training_image_num=3922
     train_network(training_image_num)
 
 if __name__ == '__main__' :

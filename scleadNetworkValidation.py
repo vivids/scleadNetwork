@@ -93,7 +93,7 @@ def validate_network():
 #             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 #             print(sess.run(update_ops))
             print('running..........')
-            if global_step == '80001':
+            if global_step == str(ct.STEPS+1):
                 break
             time.sleep(300)
         coord.request_stop()
