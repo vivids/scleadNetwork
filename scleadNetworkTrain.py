@@ -30,6 +30,7 @@ def train_network(training_image_num):
     
     
     datainfoList=readInfoFromFile(ct.DATASET_INFO_DIR)
+    print('shape_360_180:shape_180_360:shape_256_256=%d:%d:%d'%(datainfoList['shape_360_180'],datainfoList['shape_180_360'],datainfoList['shape_256_256']))
     proportion_sum = datainfoList['shape_360_180']+datainfoList['shape_180_360']+datainfoList['shape_256_256']
 #     choose = tf.random_uniform([1],minval=0,maxval=proportion_sum,dtype=tf.int32,seed=None,name=None)[0]
         
@@ -132,8 +133,8 @@ def train_network(training_image_num):
         coord.join(threads)
 
 def main(_):
-#     training_image_num=loadImageAndConvertToTFRecord()
-    training_image_num=3922
+    training_image_num=loadImageAndConvertToTFRecord()
+#     training_image_num=3922
     train_network(training_image_num)
 
 if __name__ == '__main__' :
