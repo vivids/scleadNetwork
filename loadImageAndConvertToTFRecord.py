@@ -33,28 +33,31 @@ def create_image_lists(testing_percentage,validation_percentage,dir):
         if not file_list:
             continue
         
-        label_name = dir_name
+        labels = ct.CATELOGS_LABELS[dir_name]
         while file_list:
             file = file_list.pop()
             fileNameSplit = file.split('.')
-            histOrCurr=fileNameSplit[0][-4:]
+            fileBaseName = fileNameSplit[0]
+            for i in range(1,len(fileNameSplit)-1):
+                fileBaseName = fileBaseName +'.'+fileNameSplit[i]
+            histOrCurr=fileBaseName[-4:]
             if histOrCurr == 'curr':
                 currFileName = file
-                histFileName = fileNameSplit[0][:-4]+'hist.'+fileNameSplit[1]
+                histFileName = fileBaseName[:-4]+'hist.'+fileNameSplit[-1]
                 checkExist=histFileName
             else:
                 histFileName = file
-                currFileName = fileNameSplit[0][:-4]+'curr.'+fileNameSplit[1]
+                currFileName = fileBaseName[:-4]+'curr.'+fileNameSplit[-1]
                 checkExist = currFileName
             if checkExist in file_list:
                 file_list.remove(checkExist)
                 chance = np.random.randint(100)
                 if chance < testing_percentage:
-                    testing_image.append([currFileName,histFileName,label_name])
+                    testing_image.append([currFileName,histFileName,labels])
                 elif chance < testing_percentage+validation_percentage:
-                    validation_image.append([currFileName,histFileName,label_name])
+                    validation_image.append([currFileName,histFileName,labels])
                 else:
-                    training_image.append([currFileName,histFileName, label_name])   
+                    training_image.append([currFileName,histFileName, labels])   
             else:
                 print(checkExist+' is lost, please check')
             
@@ -153,7 +156,7 @@ def mutithread_generate_TFRecord(image_list,tfrecord_name_base,threadID,):
             tfrecord_name=tfrecord_name_base+str(threadID)+'_'+str(num_shard)                        
             writer = tf.python_io.TFRecordWriter(tfrecord_name)    
         rootDir = image_pair[2]
-        example=convert_image_examples(os.path.join(ct.INPUT_DATA_DIR,rootDir),image_pair[0], image_pair[1],image_pair[2])
+        example=convert_image_examples(os.path.join(ct.INPUT_DATA_DIR,str(rootDir)),image_pair[0], image_pair[1],image_pair[2])
         writer.write(example.SerializeToString())        
     
         if not (num_images+1)%100:
